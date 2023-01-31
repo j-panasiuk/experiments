@@ -1,3 +1,5 @@
-export default function Index() {
-  return <main>TODO</main>;
+import { redirect } from "@remix-run/node";
+
+export function loader() {
+  return redirect("/lasso");
 }
