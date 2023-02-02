@@ -1,0 +1,51 @@
+.LassoContainer {
+  z-index: 1;
+  pointer-events: auto;
+  position: absolute;
+  width: 90vmin;
+  height: 90vmin;
+  margin-top: 5vmin;
+  margin-left: 5vmin;
+  top: 0;
+  left: 0;
+  display: flex;
+  outline: 4px dashed black;
+}
+
+.Lasso {
+  pointer-events: none;
+  position: absolute;
+  top: calc(1px * var(--y2));
+  left: calc(1px * var(--x2));
+  width: 0px;
+  height: 0px;
+}
+
+.LassoContainer[style] > .Lasso {
+  background: rgba(0, 255, 183, 0.25);
+  outline: 1px solid rgba(0, 255, 183, 1);
+  outline-offset: 1px;
+  --xmin: min(calc(1px * var(--x1)), calc(1px * var(--x2)));
+  --xmax: max(calc(1px * var(--x1)), calc(1px * var(--x2)));
+  --ymin: min(calc(1px * var(--y1)), calc(1px * var(--y2)));
+  --ymax: max(calc(1px * var(--y1)), calc(1px * var(--y2)));
+  --dx: calc(var(--xmax) - var(--xmin));
+  --dy: calc(var(--ymax) - var(--ymin));
+  top: var(--ymin);
+  left: var(--xmin);
+  width: var(--dx);
+  height: var(--dy);
+}
+
+[data-selection] {
+  outline-width: 1px;
+  outline-offset: 2px;
+  outline-style: solid;
+  outline-color: rgba(255, 255, 255, 0.75);
+}
+
+[data-selection="selected"] {
+  outline-width: 2px;
+  outline-color: rgba(0, 255, 183, 1);
+}
+
