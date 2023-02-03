@@ -1,12 +1,18 @@
 import type { MetaFunction, LinksFunction } from "@remix-run/node";
 import { type HTMLProps, type PointerEvent, useCallback, useRef } from "react";
 import { cls } from "~/utils/classes";
-import { LassoPoint, setLassoStyles, removeLassoStyles } from "./lasso.utils";
+import {
+  getCenterPoint,
+  getRectangle,
+  isInside,
+  toPoint,
+} from "./coordinates.utils";
 import {
   getSelectableElement,
-  selectElement,
-  toggleElement,
+  getSelectableElements,
+  getSelectionBehavior,
 } from "./selection.utils";
+import { PointIndex, setLassoStyles, removeLassoStyles } from "./lasso.utils";
 import styles from "./lasso.css";
 
 export const meta: MetaFunction = () => ({
@@ -18,18 +24,16 @@ export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 export default function LassoRoute() {
   return (
     <main className="h-screen flex items-center justify-center bg-slate-700">
-      <Lasso>
-        {(selectableProps) => (
-          <div className="grid grid-cols-3 gap-8">
-            <Box className="" {...selectableProps(true)} />
-            <Box className="" {...selectableProps(false)} />
-            <Box />
-            <Box />
-            <Box className="" {...selectableProps(true)} />
-            <Box className="" {...selectableProps(false)} />
+      <LassoProvider>
+        {({ selectable }) => (
+          <div className="grid grid-cols-2 gap-8">
+            <Box className="" {...selectable()} />
+            <Box className="" {...selectable()} />
+            <Box className="" {...selectable()} />
+            <Box className="" {...selectable()} />
           </div>
         )}
-      </Lasso>
+      </LassoProvider>
     </main>
   );
 }
@@ -42,55 +46,82 @@ function Box({ className, ...props }: HTMLProps<HTMLDivElement>) {
 
 // --- LASSO ---
 
-type LassoProps = {
-  children: (props: SelectableProps) => JSX.Element;
+type LassoProviderProps = {
+  children: (props: LassoRenderProps) => JSX.Element;
 };
 
-type SelectableProps = (selected?: boolean) => {
-  "data-selection": string;
+type LassoRenderProps = {
+  selectable: (initialSelected?: boolean) => {
+    "data-selection": string;
+  };
 };
 
-function Lasso({ children }: LassoProps) {
+const selectableProps: LassoRenderProps = {
+  selectable: (initialSelected?: boolean) => ({
+    "data-selection": initialSelected ? "selected" : "",
+  }),
+};
+
+function LassoProvider({ children }: LassoProviderProps) {
   return (
     <>
-      <LassoContainer />
-      <LassoSelection>{children}</LassoSelection>
+      <LassoOverlay />
+      {children(selectableProps)}
     </>
   );
 }
 
-function LassoContainer() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const selectionRef = useRef<Set<HTMLElement>>(new Set());
+function LassoOverlay() {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const lassoRef = useRef<{ start?: PointerEvent }>({});
 
   const onPointerDown = useCallback((ev: PointerEvent) => {
-    setLassoStyles(containerRef.current, ev);
-    const el = getSelectableElement(ev);
-    if (el) selectionRef.current.add(el);
-  }, []);
-
-  const onPointerUp = useCallback((ev: PointerEvent) => {
-    removeLassoStyles(containerRef.current);
-    const el = getSelectableElement(ev);
-    if (el) selectionRef.current.add(el);
-    const act = selectionRef.current.size > 1 ? selectElement : toggleElement;
-    for (const sel of selectionRef.current.values()) act(sel);
-    selectionRef.current.clear();
+    setLassoStyles(overlayRef.current, ev);
+    lassoRef.current.start = ev;
   }, []);
 
   const onPointerMove = useCallback((ev: PointerEvent) => {
-    if (ev.pressure > 0)
-      setLassoStyles(containerRef.current, ev, LassoPoint.END);
+    if (ev.pressure > 0) {
+      setLassoStyles(overlayRef.current, ev, PointIndex.END);
+    }
+  }, []);
+
+  const onPointerUp = useCallback((ev: PointerEvent) => {
+    removeLassoStyles(overlayRef.current);
+
+    const lassoStart = toPoint(lassoRef.current.start!);
+    const lassoEnd = toPoint(ev);
+    const selection = getSelectionBehavior(lassoStart, lassoEnd);
+
+    if ("rectangle" in selection) {
+      const lassoRect = getRectangle(lassoStart, lassoEnd);
+      const elements = getSelectableElements(
+        overlayRef.current!.parentElement!
+      );
+      elements.forEach((el) => {
+        if (isInside(lassoRect, getCenterPoint(el))) {
+          selection.action(el);
+        }
+      });
+    } else {
+      const el = getSelectableElement(ev);
+      if (el) {
+        selection.action(el);
+      }
+    }
+
+    delete lassoRef.current.start;
   }, []);
 
   const onPointerLeave = useCallback(() => {
-    removeLassoStyles(containerRef.current);
+    removeLassoStyles(overlayRef.current);
+    delete lassoRef.current.start;
   }, []);
 
   return (
     <div
-      className="LassoContainer"
-      ref={containerRef}
+      className="LassoOverlay"
+      ref={overlayRef}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerMove={onPointerMove}
@@ -99,12 +130,4 @@ function LassoContainer() {
       <div className="Lasso" />
     </div>
   );
-}
-
-function LassoSelection({ children }: LassoProps) {
-  const selectableProps: SelectableProps = (selected?: boolean) => ({
-    "data-selection": selected ? "selected" : "",
-  });
-
-  return <div className="LassoContent">{children(selectableProps)}</div>;
 }

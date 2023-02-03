@@ -1,15 +1,12 @@
-.LassoContainer {
+.LassoOverlay {
   z-index: 1;
   pointer-events: auto;
-  position: absolute;
-  width: 90vmin;
-  height: 90vmin;
-  margin-top: 5vmin;
-  margin-left: 5vmin;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
   top: 0;
   left: 0;
   display: flex;
-  outline: 4px dashed black;
 }
 
 .Lasso {
@@ -21,7 +18,7 @@
   height: 0px;
 }
 
-.LassoContainer[style] > .Lasso {
+.LassoOverlay[style] > .Lasso {
   background: rgba(0, 255, 183, 0.25);
   outline: 1px solid rgba(0, 255, 183, 1);
   outline-offset: 1px;

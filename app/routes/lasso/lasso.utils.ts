@@ -1,19 +1,19 @@
 import type { PointerEvent } from "react";
 
-export enum LassoPoint {
+export enum PointIndex {
   START = 1,
   END = 2,
 }
 
-const POINTS = [LassoPoint.START, LassoPoint.END] as const;
+const POINTS = [PointIndex.START, PointIndex.END] as const;
 
-const x = (i: LassoPoint) => `--x${i}`;
-const y = (i: LassoPoint) => `--y${i}`;
+const x = (i: PointIndex) => `--x${i}`;
+const y = (i: PointIndex) => `--y${i}`;
 
 export function setLassoStyles(
   el: HTMLElement | null,
   ev: PointerEvent,
-  p?: LassoPoint
+  p?: PointIndex
 ): void {
   if (el) {
     for (const i of p ? [p] : POINTS) {
